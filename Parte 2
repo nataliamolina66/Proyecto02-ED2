@@ -1,0 +1,34 @@
+//PROGRAMACIÓN TIVA
+int pushButton1 = 31;
+int flameDetected = 0;
+int boton = 0;
+
+void setup() {
+  pinMode(pushButton1, INPUT_PULLUP);
+  //Comenzar la comunicación serial 
+  Serial.begin(9600);
+  Serial2.begin(9600);  
+}
+
+void loop() {
+  //*PARTE 2: comunicación serial TIVA con ESP32*
+  //Lectura 
+  if (digitalRead(pushButton1) == LOW) {
+    boton = 1;
+    Serial2.write(boton);
+  }
+  // Verifica si hay datos disponibles en Serial2 (desde el ESP32)
+  if (Serial2.available()) {
+    flameDetected = Serial2.read();
+    
+    // Imprime el valor de flameDetected en el monitor serial
+    if (flameDetected == 1) {
+      Serial.println("TIVA C: Sí se detecta llama");
+    }
+    if (flameDetected == 0) {
+      Serial.println("TIVA C: No se detecta llama");
+    }
+  }
+
+    delay(2000);
+  }
