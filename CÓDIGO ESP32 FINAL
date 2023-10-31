@@ -1,0 +1,53 @@
+//Definición de librerías a utilizar 
+#include <Arduino.h>
+#include <stdint.h>
+#include <config.h>
+
+#define pinADC 35 //definición pin del sensor de flamas 
+int flameDetected = 0; // Variable para almacenar si se detecta la llama (0 = no, 1 = sí)
+int prv_flameDetected = 0;
+int boton = 0;
+
+void setup() {
+  //Declaramos pin donde se conecta el zumbador
+  pinMode(pinADC, INPUT);
+  Serial2.begin(9600);
+  Serial.begin(9600);
+  Serial.println("Hello, ESP32!");
+}
+
+void loop() {
+ boton = Serial2.read();
+
+if (boton == 1) {
+ //**PARTE 1: LECTURA ANALÓGICA DE SENSOR EN ESP32**
+  //Lectura del sensor de flamas
+  int adcRaw = analogRead(pinADC);
+  // Define un umbral adecuado 
+  int umbral = 4000; // Ajusta este valor según las pruebas
+  
+  //Condicional para determinar si se detecta llama o no 
+  if (adcRaw < umbral) {
+    flameDetected = 1; // Se detecta una llama
+    Serial.println("Si se detecta flama");
+        Serial2.write(flameDetected);
+
+
+  } else {
+    flameDetected = 0; // No se detecta una llama
+    Serial.println("No se detecta flama");
+        Serial2.write(flameDetected);
+
+  }
+}
+  // Envía el valor de flameDetected a la TIVA C
+  
+  /* if(prv_flameDetected != flameDetected )
+   {
+     Serial2.write(flameDetected);
+     prv_flameDetected=flameDetected;
+
+   } 
+  */
+  delay(250); 
+}
