@@ -1,7 +1,36 @@
 //Encabezado
 #include <SPI.h>
 #include <SD.h>
-File root;  // Declara un objeto File llamado root para representar el directorio raíz de la tarjeta SD
+File myFile;
+int buzzerPin = 30;
+#define note_cc 261
+#define note_dd 294
+#define note_ee 329
+#define note_ff 349
+#define note_g 391
+#define note_gS 415
+#define note_a 440
+#define note_aS 455
+#define note_b 466
+#define note_cH 523
+#define note_cSH 554
+#define note_dH 587
+#define note_dSH 622
+#define note_eH 659
+#define note_fH 698
+#define note_fSH 740
+#define note_gH 784
+#define note_gSH 830
+#define note_aH 880
+
+void beep(int note, int duration)
+{
+  tone(buzzerPin, note, duration/2);
+  delay(duration/2);
+  noTone(buzzerPin);
+  delay(duration/2 + 20);  
+}
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <TM4C123GH6PM.h>
@@ -23,12 +52,13 @@ File root;  // Declara un objeto File llamado root para representar el directori
 #define LCD_CS PD_1
 #define LCD_RS PD_2
 #define LCD_WR PD_3
-#define LCD_RD PE_1
+#define LCD_RD PA_6
 int DPINS[] = {PB_0, PB_1, PB_2, PB_3, PB_4, PB_5, PB_6, PB_7};
 int pushButton1 = 31;
 int pushButton2 = 17;
 int flameDetected = 0;
 int boton = 0;
+int valorglobalFlame = 0;
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -53,7 +83,8 @@ void setup() {
   SysCtlClockSet(SYSCTL_SYSDIV_2_5|SYSCTL_USE_PLL|SYSCTL_OSC_MAIN|SYSCTL_XTAL_16MHZ);
   pinMode(pushButton1, INPUT_PULLUP);
   pinMode(pushButton2, INPUT_PULLUP);
-  
+  pinMode(buzzerPin, OUTPUT); // set buzzerPin to OUTPUT
+
   //Comenzar la comunicación serial 
   Serial.begin(9600);
   Serial2.begin(9600); 
@@ -66,48 +97,79 @@ void setup() {
   LCD_Clear(0x00);
 
   SPI.setModule(0);
-
-
   Serial.print("Initializing SD card...");
-  // On the Ethernet Shield, CS is pin 4. It's set as an output by default.
-  // Note that even if it's not used as the CS pin, the hardware SS pin
-  // (10 on most Arduino boards, 53 on the Mega) must be left as an output
-  // or the SD library functions will not work.
   pinMode(PE_3, OUTPUT);
-
   if (!SD.begin(PE_3)) {
     Serial.println("initialization failed!");
     return;
   }
   Serial.println("initialization done.");
-
-  root = SD.open("/");
-
-  printDirectory(root, 0);
-
   Serial.println("done!");
 }
 
-String Data = "";  // Declara una cadena llamada Data para almacenar temporalmente la imagen ingresada
 
 void loop() {
    //*PARTE 2: comunicación serial TIVA con ESP32*
   //Lectura 
   if (digitalRead(pushButton1) == LOW) {
+  beep(note_a, 500);
+  beep(note_a, 500);
+  beep(note_a, 500);
+  beep(note_ff, 350);
+  beep(note_cH, 150);  
+  beep(note_a, 500);
+  beep(note_ff, 350);
+  beep(note_cH, 150);
+  beep(note_a, 650);
+  
     boton = 1;
     Serial2.write(boton);
   }
 
   if (digitalRead(pushButton2) == LOW) {
-    boton = 0;
-    Serial2.write(boton);
-    saveData();
-    displayData("/lab4.txt");
+  beep(note_eH, 500);
+  beep(note_eH, 500);
+  beep(note_eH, 500);   
+  beep(note_fH, 350);
+  beep(note_cH, 150);
+  beep(note_gS, 500);
+  beep(note_ff, 350);
+  beep(note_cH, 150);
+  beep(note_a, 650);
+     myFile = SD.open("test.txt", FILE_WRITE);
+  // if the file opened okay, write to it:
+  if (myFile) {
+    Serial.print("Writing to test.txt...");
+    myFile.println(valorglobalFlame);
+    // close the file:
+    myFile.close();
+    Serial.println("done.");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
   }
+    // re-open the file for reading:
+  myFile = SD.open("test.txt");
+  if (myFile) {
+    Serial.println("test.txt:");
+
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+      Serial.write(myFile.read());
+    }
+    // close the file:
+    myFile.close();
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+  }
+  
   // Verifica si hay datos disponibles en Serial2 (desde el ESP32)
   if (Serial2.available()) {
     flameDetected = Serial2.read();
-    
+    valorglobalFlame = flameDetected;
+
     // Imprime el valor de flameDetected en el monitor serial
     if (flameDetected == 1) {
       Serial.println("TIVA C: Sí se detecta llama");
@@ -121,63 +183,13 @@ void loop() {
     }
   }
 
-    delay(2000);
+    delay(250);
   
 }
 
-void saveData() {
-  if (Serial2.available()){
-      char dato = Serial2.read();
-      Data += dato; // Almacena los datos ingresados en la cadena dato
-      File textFile = SD.open("/lab4.txt", FILE_WRITE);  // Abre o crea el archivo "lab4.txt" para escritura
-      if (textFile) {
-        textFile.print(Data);  // Escribe la data en el archivo
-        textFile.close();  // Cierra el archivo
-        Serial.println("Dato guardada en SD.txt.");  // Imprime un mensaje de éxito
-      } else {
-        Serial.println("Error al abrir SD.txt para escritura.");  // Imprime un mensaje de error si no se puede abrir el archivo
-      }
-      Data = "";  // Limpia los datos de la data
-  }
-  }
 
-void printDirectory(File dir, int numTabs) {
-  // Lista y muestra la estructura de directorios y archivos en la tarjeta SD
-  while (true) {
-    File entry = dir.openNextFile();  // Abre el siguiente archivo o directorio en el directorio actual
-    if (!entry) {
-      // No hay más archivos
-      break;
-    }
-    for (uint8_t i = 0; i < numTabs; i++) {
-      Serial.print('\t');  // Agrega sangría para mostrar la estructura de directorios
-    }
-    Serial.print(entry.name());  // Muestra el nombre del archivo o directorio
-    if (entry.isDirectory()) {
-      Serial.println("/");  // Si es un directorio, muestra "/"
-      printDirectory(entry, numTabs + 1);  // Llama a la función para mostrar el contenido del directorio
-    } else {
-      // Los archivos tienen tamaños, los directorios no
-      Serial.print("\t\t");
-      Serial.println(entry.size(), DEC);  // Muestra el tamaño del archivo en bytes
-    }
-    entry.close();  // Cierra el archivo o directorio
-  }
-}
 
-void displayData(const char* filename) {
-  // Abre y muestra el contenido del archivo especificado
-  File textFile = SD.open(filename);  // Abre el archivo especificado
-  if (textFile) {
-    Serial.print("Imagen: ");
-    while (textFile.available()) {
-      Serial.write(textFile.read());  // Muestra el contenido del archivo en la terminal
-    }
-    textFile.close();  // Cierra el archivo
-  } else {
-    Serial.println("Error al abrir el archivo.");  // Imprime un mensaje de error si no se puede abrir el archivo
-  }
-}
+
 
 
 //***************************************************************************************************************************************
@@ -224,7 +236,7 @@ void LCD_Init(void) {
   LCD_DATA(0x08);
   //****************************************
   LCD_CMD(0x36);  // (MEMORYACCESS)
-  LCD_DATA(0x40|0x80|0x20|0x08); // LCD_DATA(0x19);
+  LCD_DATA(0b01111000);//0x40|0x80|0x20|0x08); // LCD_DATA(0x19);
   //****************************************
   LCD_CMD(0x3A); // Set_pixel_format (PIXELFORMAT)
   LCD_DATA(0x05); // color setings, 05h - 16bit pixel, 11h - 3bit pixel
