@@ -109,6 +109,7 @@ void setup() {
 
 
 void loop() {
+  
    //*PARTE 2: comunicación serial TIVA con ESP32*
   //Lectura 
   if (digitalRead(pushButton1) == LOW) {
@@ -539,6 +540,11 @@ void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[],int 
       k = k + 2;
      } 
   }
+    
+    
+    }
+  digitalWrite(LCD_CS, HIGH);
+}
     
     
     }
